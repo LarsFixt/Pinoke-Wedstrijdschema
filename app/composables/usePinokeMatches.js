@@ -22,7 +22,7 @@ export function usePinokeMatches() {
         loading.value = true;
         error.value = false;
         try {
-            const response = await fetch('https://www.pinoke.nl/_dm/s/rt/actions/sites/c07b0251/collections/matches_sep_2025/');
+            const response = await fetch('/api/matches');
             if (!response.ok) throw new Error('HTTP error');
             const data = await response.json();
             let allMatches = JSON.parse(data.value || '[]');
@@ -41,9 +41,6 @@ export function usePinokeMatches() {
                 return dA - dB;
             });
             // Today matches
-            // TODO REMOVE TEST DATE HERE (2025-09-05)
-            // now = new Date('2025-09-06T14:30:00')
-            // const today = new Date('2025-09-05T14:30:00')
             const today = new Date();
             const todayISO = today.toISOString().split('T')[0];
             const todayMatches = allMatches

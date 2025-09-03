@@ -45,7 +45,7 @@ function getMatchStatus(match) {
       matchDate = new Date(`${y}-${m}-${d}T${timeStr}`);
     }
   }
-  const now = new Date('2025-09-05T14:30:00'); // For debugging, set to current time in production
+  const now = new Date();
   if (matchDate && matchDate > now) {
     const diff = matchDate - now;
     const hours = Math.floor(diff / (1000 * 60 * 60));

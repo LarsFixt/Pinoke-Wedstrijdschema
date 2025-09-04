@@ -1,12 +1,27 @@
-function parseDate(dateStr) {
+/**
+ * API endpoint to fetch and return upcoming home matches for Pinoké.
+ *
+ * - Fetches match data from the Pinoké website.
+ * - Filters for matches at 'Amsterdamse Bos (Pinoké)'.
+ * - Only includes matches from today or later.
+ * - Returns today's matches, or the next available date with matches if none today.
+ * - Dates are parsed and converted to UTC using Luxon.
+ *
+ * Response:
+ *   {
+ *     matches: Array,         // List of match objects for today or next match day
+ *     isToday: Boolean,       // True if matches are for today
+ *     serverTime: String      // Current server time in ISO format
+ *   }
+ */
+
+import { DateTime } from 'luxon';
+
+function parseAmsterdamDate(dateStr, timeStr) {
   if (!dateStr) return null;
-  if (/\d{4}-\d{2}-\d{2}/.test(dateStr)) {
-    return new Date(dateStr);
-  } else if (/\d{2}-\d{2}-\d{4}/.test(dateStr)) {
-    const [d, m, y] = dateStr.split('-');
-    return new Date(`${y}-${m}-${d}`);
-  }
-  return null;
+  const [d, m, y] = dateStr.split('-');
+  const time = timeStr || '00:00';
+  return DateTime.fromISO(`${y}-${m}-${d}T${time}`, { zone: 'Europe/Amsterdam' }).toUTC();
 }
 
 export default defineEventHandler(async (event) => {
@@ -14,11 +29,9 @@ export default defineEventHandler(async (event) => {
     const response = await fetch('https://www.pinoke.nl/_dm/s/rt/actions/sites/c07b0251/collections/matches_sep_2025/', {
       headers: {
         'User-Agent': 'Mozilla/5.0 (compatible; PinokeBot/1.0)',
-        // Add any required headers here
       }
     });
     if (!response.ok) {
-      console.error('Upstream error:', response.status, response.statusText);
       return {
         error: true,
         statusCode: response.status,
@@ -28,65 +41,39 @@ export default defineEventHandler(async (event) => {
     }
     const data = await response.json();
     let allMatches = JSON.parse(data.value || '[]');
+    const now = DateTime.utc();
+    // const now = DateTime.fromISO("2025-09-06T20:01:00Z"); // Fixed time for testing
 
-    // Filter for home matches only
-    const now = new Date();
-    const nowISO = now.toISOString().split('T')[0];
-
-    allMatches = allMatches.filter(m => {
-      if (!m.data?.location?.name || m.data.location.name !== "Amsterdamse Bos (Pinoké)") return false;
-      const matchDate = parseDate(m.data?.date);
-      if (!matchDate) return false;
-      const matchISO = matchDate.toISOString().split('T')[0];
-      return matchISO >= nowISO;
-    }).map(m => m.data);
+    // Filter and map home matches in one step
+    allMatches = allMatches
+      .map(m => m.data)
+      .filter(match => match?.location?.name === 'Amsterdamse Bos (Pinoké)')
+      .map(match => {
+        const utcDate = parseAmsterdamDate(match.date, match.time);
+        return { ...match, utcDate: utcDate && utcDate.isValid ? utcDate : null };
+      })
+      .filter(match => match.utcDate && match.utcDate.toISO().split('T')[0] >= now.toISO().split('T')[0]);
 
     // Sort by date
-    allMatches.sort((a, b) => {
-      const dA = parseDate(a.date);
-      const dB = parseDate(b.date);
-      return dA - dB;
-    });
+    allMatches.sort((a, b) => a.utcDate - b.utcDate);
 
-    // Get today's matches
-    const todayISO = now.toISOString().split('T')[0];
-    const todayMatches = allMatches.filter(match => {
-      const matchDate = parseDate(match.date);
-      if (!matchDate) return false;
-      const matchISO = matchDate.toISOString().split('T')[0];
-      return matchISO === todayISO;
-    });
+    // Find today's matches
+    const todayISO = now.toISO().split('T')[0];
 
-    // If no matches today, find next available date with matches
-    let matchesToReturn = todayMatches;
-    if (todayMatches.length === 0) {
-      // Group matches by date
-      const matchesByDate = {};
-      allMatches.forEach(match => {
-        const matchDate = parseDate(match.date);
-        if (matchDate) {
-          const dateKey = matchDate.toISOString().split('T')[0];
-          if (!matchesByDate[dateKey]) {
-            matchesByDate[dateKey] = [];
-          }
-          matchesByDate[dateKey].push(match);
-        }
-      });
+    let matchesToReturn = allMatches.filter(match => match.utcDate.toISO().split('T')[0] === todayISO);
 
-      // Get the first date with matches
-      const sortedDates = Object.keys(matchesByDate).sort();
-      if (sortedDates.length > 0) {
-        matchesToReturn = matchesByDate[sortedDates[0]];
-      }
+    // If no matches today, find next available date with matches and return maximum 4 matches
+    if (matchesToReturn.length === 0 && allMatches.length > 0) {
+      const nextDate = allMatches[0].utcDate.toISO().split('T')[0];
+      matchesToReturn = allMatches.filter(match => match.utcDate.toISO().split('T')[0] === nextDate).slice(0, 4);
     }
 
     return {
       matches: matchesToReturn,
-      isToday: todayMatches.length > 0,
-      serverTime: now.toISOString()
+      isToday: matchesToReturn.some(match => match.utcDate.toISO().split('T')[0] === todayISO),
+      serverTime: now.toISO()
     };
   } catch (err) {
-    console.error('Fetch error:', err);
     return {
       error: true,
       statusCode: 500,

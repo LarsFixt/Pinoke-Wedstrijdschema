@@ -1,87 +1,116 @@
 <template>
-  <div class="bg-white rounded-xl shadow-lg p-4 sm:p-6 border-l-4 sm:border-l-8 border-blue-800 fade-in hover:shadow-xl transition-shadow">
-    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-      <div class="flex-1 flex items-center flex-col sm:flex-row">
-        <img v-if="match.home_team_club_logo_url" :src="match.home_team_club_logo_url" alt="Home Club Logo" class="w-12 h-12 hidden sm:block rounded-full mb-2 sm:mb-0 mr-4" />
-        <div class="text-center sm:text-left">
-          <div class="text-xl sm:text-3xl font-bold text-gray-800 mb-1 sm:mb-2 flex items-center justify-center sm:justify-start">
-            {{ match.home_team_name || 'Home Team' }}
-            <span class="text-blue-800 mx-2">-</span>
-            {{ match.away_team_name || 'Away Team' }}
-          </div>
-          <div class="flex items-center text-base sm:text-lg text-gray-600 justify-center sm:justify-start">
-            <span class="inline-block w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
-            Veld: <span class="font-semibold ml-1">{{ match.field || 'TBD' }}</span>
-          </div>
+  <div :class="cardClasses">
+    <div class="flex flex-col h-full">
+      <!-- Header with time and field -->
+      <div :class="headerClasses">
+        <div class="flex justify-between items-center w-full">
+          <span :class="timeClasses">{{ match.time }}</span>
+          <span :class="fieldClasses">{{ match.field }}</span>
         </div>
-        <img v-if="match.away_team_club_logo_url" :src="match.away_team_club_logo_url" alt="Away Club Logo" class="w-12 h-12 hidden sm:block rounded-full ml-4 border border-gray-200" />
       </div>
-      <div class="text-right sm:ml-6">
-        <div class="text-2xl sm:text-4xl font-bold text-blue-800">
-          {{ (match.time && match.time.length === 5) ? match.time : (match.time ? match.time.substring(0,5) : 'TBD') }}
+
+      <!-- Main content -->
+      <div class="flex-1 p-3 sm:p-4">
+        <div :class="teamsContainerClasses">
+          <!-- Home team -->
+          <div class="flex items-center justify-center space-x-2 sm:space-x-3">
+            <img v-if="match.home_team_club_logo_url" :src="match.home_team_club_logo_url"
+              :alt="`${match.home_team_club_name} logo`" :class="logoClasses">
+            <div class="text-center flex-1">
+              <p :class="teamNameClasses">{{ match.home_team_name }}</p>
+              <p :class="clubNameClasses">{{ match.home_team_club_name }}</p>
+            </div>
+          </div>
+
+          <!-- VS divider -->
+          <div :class="vsClasses">vs</div>
+
+          <!-- Away team -->
+          <div class="flex items-center justify-center space-x-2 sm:space-x-3">
+            <img v-if="match.away_team_club_logo_url" :src="match.away_team_club_logo_url"
+              :alt="`${match.away_team_club_name} logo`" :class="logoClasses">
+            <div class="text-center flex-1">
+              <p :class="teamNameClasses">{{ match.away_team_name }}</p>
+              <p :class="clubNameClasses">{{ match.away_team_club_name }}</p>
+            </div>
+          </div>
         </div>
-        <div class="text-xs sm:text-sm text-gray-500 mt-1">
-          {{ getMatchStatus(match) }}
+
+        <!-- Category and age info -->
+        <div v-if="!compact" class="mt-3 text-center">
+          <span class="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
+            {{ match.category }} - {{ match.sub_category }}
+          </span>
         </div>
+      </div>
+
+      <!-- Footer with referees (non-compact only) -->
+      <div v-if="!compact && match.referees" class="px-3 sm:px-4 pb-3 text-center">
+        <p class="text-xs text-gray-600">
+          <span class="font-medium">Scheidsrechters:</span> {{ match.referees }}
+        </p>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue';
+import { computed } from 'vue';
 
 const props = defineProps({
-  match: { type: Object, required: true }
-});
-
-const now = ref(new Date());
-let timer = null;
-
-onMounted(() => {
-  timer = setInterval(() => {
-    now.value = new Date();
-  }, 60000); // update every minute
-});
-
-onUnmounted(() => {
-  if (timer) clearInterval(timer);
-});
-
-function getMatchStatus(match) {
-  const dateStr = match.date;
-  const timeStr = match.time || '00:00';
-  let matchDate;
-  if (dateStr && dateStr.includes('-')) {
-    if (/\d{4}-\d{2}-\d{2}/.test(dateStr)) {
-      matchDate = new Date(`${dateStr}T${timeStr}`);
-    } else if (/\d{2}-\d{2}-\d{4}/.test(dateStr)) {
-      const [d, m, y] = dateStr.split('-');
-      matchDate = new Date(`${y}-${m}-${d}T${timeStr}`);
-    }
+  match: {
+    type: Object,
+    required: true
+  },
+  compact: {
+    type: Boolean,
+    default: false
   }
-  const current = now.value;
-  if (matchDate && matchDate > current) {
-    const diff = matchDate - current;
-    const hours = Math.floor(diff / (1000 * 60 * 60));
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-    if (hours > 0) {
-      return `Over ${hours}u ${minutes}m`;
-    } else {
-      return `Over ${minutes} minuten`;
-    }
-  } else {
-    return 'Bezig';
-  }
-}
+});
+
+// Dynamic classes based on compact mode
+const cardClasses = computed(() => [
+  'bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200 border border-gray-200',
+  props.compact ? 'h-40 sm:h-44' : 'h-auto min-h-48'
+]);
+
+const headerClasses = computed(() => [
+  'bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-t-lg',
+  props.compact ? 'px-2 py-1' : 'px-3 sm:px-4 py-2'
+]);
+
+const timeClasses = computed(() => [
+  'font-bold',
+  props.compact ? 'text-sm' : 'text-base sm:text-lg'
+]);
+
+const fieldClasses = computed(() => [
+  'text-right opacity-90',
+  props.compact ? 'text-xs' : 'text-sm'
+]);
+
+const teamsContainerClasses = computed(() => [
+  'space-y-2',
+  props.compact ? 'space-y-1' : 'space-y-3'
+]);
+
+const logoClasses = computed(() => [
+  'object-contain',
+  props.compact ? 'w-6 h-6 sm:w-8 sm:h-8' : 'w-8 h-8 sm:w-12 sm:h-12'
+]);
+
+const teamNameClasses = computed(() => [
+  'font-semibold text-gray-900',
+  props.compact ? 'text-xs sm:text-sm' : 'text-sm sm:text-base'
+]);
+
+const clubNameClasses = computed(() => [
+  'text-gray-600',
+  props.compact ? 'text-xs' : 'text-xs sm:text-sm'
+]);
+
+const vsClasses = computed(() => [
+  'text-center font-bold text-gray-500',
+  props.compact ? 'text-sm py-1' : 'text-lg py-2'
+]);
 </script>
-
-<style scoped>
-.fade-in {
-  animation: fadeIn 0.5s ease-in;
-}
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-</style>

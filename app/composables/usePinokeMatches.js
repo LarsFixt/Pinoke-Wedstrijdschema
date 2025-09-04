@@ -1,37 +1,53 @@
 import { ref } from 'vue';
 
-function parseDate(dateStr) {
-    if (!dateStr) return null;
-    if (/\d{4}-\d{2}-\d{2}/.test(dateStr)) {
-        return new Date(dateStr);
-    } else if (/\d{2}-\d{2}-\d{4}/.test(dateStr)) {
-        const [d, m, y] = dateStr.split('-');
-        return new Date(`${y}-${m}-${d}`);
-    }
-    return null;
-}
-
+/**
+ * Composable for managing Pinoke matches state and live updates.
+ * @returns {Object} State refs and fetchMatches function
+ */
 export function usePinokeMatches() {
+    /** Indicates if matches are loading */
     const loading = ref(true);
+    /** Indicates if there was an error fetching matches */
     const error = ref(false);
+    /** List of match objects */
     const matches = ref([]);
-    const nextHomeMatches = ref([]);
+    /** Last update time as string */
     const lastUpdate = ref('');
+    /** True if showing today's matches */
     const isToday = ref(false);
     let updateInterval = null;
 
+    /**
+     * Filters matches to only include those that are still active (not ended).
+     * @param {Array} matchList - List of match objects
+     * @returns {Array} Filtered list of active matches
+     */
     function filterActiveMatches(matchList) {
         const now = new Date();
         return matchList.filter(match => {
-            const matchDate = parseDate(match.date);
-            if (!matchDate) return false;
-            const matchTimeStr = match.time || '00:00';
-            const matchDateTime = new Date(`${matchDate.toISOString().split('T')[0]}T${matchTimeStr}`);
-            const cutoffTime = new Date(now.getTime() - 90 * 60 * 1000);
-            return matchDateTime > cutoffTime;
+            if (!match.utcDate) return false;
+            const matchDateTime = new Date(match.utcDate);
+
+            // Calculate match duration based on category
+            let durationMinutes = 90; // Default for senior matches
+
+            // Shorter durations for youth matches
+            if (match.category === 'Jongste jeugd') {
+                durationMinutes = 50; // O8, O9, O10 matches are shorter
+            } else if (match.sub_category && (match.sub_category.includes('Onder 12') || match.sub_category.includes('Onder 14'))) {
+                durationMinutes = 70; // O12, O14 matches
+            } else if (match.sub_category === 'Trimhockey') {
+                durationMinutes = 60; // Trimhockey is typically shorter
+            }
+
+            const endTime = new Date(matchDateTime.getTime() + durationMinutes * 60 * 1000);
+            return now < endTime;
         });
     }
 
+    /**
+     * Updates the matches list and last update time.
+     */
     function updateMatches() {
         if (isToday.value) {
             const activeMatches = filterActiveMatches(matches.value);
@@ -40,11 +56,23 @@ export function usePinokeMatches() {
         lastUpdate.value = new Date().toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
     }
 
+    /**
+     * Starts live updates for matches and periodic server fetches.
+     */
     function startLiveUpdates() {
         if (updateInterval) clearInterval(updateInterval);
-        updateInterval = setInterval(updateMatches, 60000); // Update every minute
+        updateInterval = setInterval(() => {
+            updateMatches();
+        }, 60000); // Update every minute
+        // Also fetch new matches from server every hour
+        setInterval(() => {
+            fetchMatches();
+        }, 3600000); // 1 hour
     }
 
+    /**
+     * Stops live updates for matches.
+     */
     function stopLiveUpdates() {
         if (updateInterval) {
             clearInterval(updateInterval);
@@ -52,6 +80,10 @@ export function usePinokeMatches() {
         }
     }
 
+    /**
+     * Fetches matches from the server and updates state.
+     * Handles errors and starts/stops live updates as needed.
+     */
     async function fetchMatches() {
         loading.value = true;
         error.value = false;
@@ -66,7 +98,11 @@ export function usePinokeMatches() {
 
             matches.value = data.matches || [];
             isToday.value = data.isToday || false;
-            nextHomeMatches.value = !data.isToday ? matches.value : [];
+
+            if (matches.value) {
+                // filter out past matches if showing today's matches
+                matches.value = filterActiveMatches(matches.value);
+            }
 
             // If showing today's matches, start live updates
             if (isToday.value) {
@@ -84,12 +120,12 @@ export function usePinokeMatches() {
         }
     }
 
+
     return {
         loading,
         error,
         matches,
         isToday,
-        nextHomeMatches,
         lastUpdate,
         fetchMatches
     };

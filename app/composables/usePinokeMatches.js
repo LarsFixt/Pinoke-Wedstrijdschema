@@ -17,6 +17,40 @@ export function usePinokeMatches() {
     const matches = ref([]);
     const nextHomeMatches = ref([]);
     const lastUpdate = ref('');
+    const isToday = ref(false);
+    let updateInterval = null;
+
+    function filterActiveMatches(matchList) {
+        const now = new Date();
+        return matchList.filter(match => {
+            const matchDate = parseDate(match.date);
+            if (!matchDate) return false;
+            const matchTimeStr = match.time || '00:00';
+            const matchDateTime = new Date(`${matchDate.toISOString().split('T')[0]}T${matchTimeStr}`);
+            const cutoffTime = new Date(now.getTime() - 90 * 60 * 1000);
+            return matchDateTime > cutoffTime;
+        });
+    }
+
+    function updateMatches() {
+        if (isToday.value) {
+            const activeMatches = filterActiveMatches(matches.value);
+            matches.value = activeMatches;
+        }
+        lastUpdate.value = new Date().toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function startLiveUpdates() {
+        if (updateInterval) clearInterval(updateInterval);
+        updateInterval = setInterval(updateMatches, 60000); // Update every minute
+    }
+
+    function stopLiveUpdates() {
+        if (updateInterval) {
+            clearInterval(updateInterval);
+            updateInterval = null;
+        }
+    }
 
     async function fetchMatches() {
         loading.value = true;
@@ -25,50 +59,26 @@ export function usePinokeMatches() {
             const response = await fetch('/api/matches');
             if (!response.ok) throw new Error('HTTP error');
             const data = await response.json();
-            let allMatches = JSON.parse(data.value || '[]');
-            const now = new Date();
-            const nowISO = now.toISOString().split('T')[0];
-            allMatches = allMatches.filter(m => {
-                if (!m.data?.location?.name || m.data.location.name !== "Amsterdamse Bos (Pinoké)") return false;
-                const matchDate = parseDate(m.data?.date);
-                if (!matchDate) return false;
-                const matchISO = matchDate.toISOString().split('T')[0];
-                return matchISO >= nowISO;
-            });
-            allMatches.sort((a, b) => {
-                const dA = parseDate(a.data?.date);
-                const dB = parseDate(b.data?.date);
-                return dA - dB;
-            });
-            // Today matches
-            const today = new Date();
-            const todayISO = today.toISOString().split('T')[0];
-            const todayMatches = allMatches
-                .map(m => m.data)
-                .filter(match => {
-                    const matchDate = parseDate(match.date);
-                    if (!matchDate) return false;
-                    const matchISO = matchDate.toISOString().split('T')[0];
-                    if (matchISO !== todayISO) return false;
-                    if (!match.location?.name || match.location.name !== "Amsterdamse Bos (Pinoké)") return false;
-                    const matchTimeStr = match.time || '00:00';
-                    const matchDateTime = new Date(`${matchISO}T${matchTimeStr}`);
-                    const cutoffTime = new Date(today.getTime() - 90 * 60 * 1000);
-                    return matchDateTime > cutoffTime;
-                })
-                .sort((a, b) => {
-                    const dA = parseDate(a.date);
-                    const dB = parseDate(b.date);
-                    return dA - dB;
-                });
-            matches.value = todayMatches;
-            console.log('Today matches:', todayMatches);
-            nextHomeMatches.value = todayMatches.length === 0
-                ? allMatches.map(m => m.data).slice(0, 3)
-                : [];
-            lastUpdate.value = today.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+
+            if (data.error) {
+                throw new Error(data.message || 'Server error');
+            }
+
+            matches.value = data.matches || [];
+            isToday.value = data.isToday || false;
+            nextHomeMatches.value = !data.isToday ? matches.value : [];
+
+            // If showing today's matches, start live updates
+            if (isToday.value) {
+                startLiveUpdates();
+            } else {
+                stopLiveUpdates();
+            }
+
+            lastUpdate.value = new Date().toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
         } catch (e) {
             error.value = true;
+            console.error('Fetch error:', e);
         } finally {
             loading.value = false;
         }
@@ -78,6 +88,7 @@ export function usePinokeMatches() {
         loading,
         error,
         matches,
+        isToday,
         nextHomeMatches,
         lastUpdate,
         fetchMatches

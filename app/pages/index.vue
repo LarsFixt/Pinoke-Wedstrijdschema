@@ -26,17 +26,13 @@
         </template>
         <template v-if="matches.length">
           <div v-for="timeGroup in groupedMatches" :key="timeGroup.time" class="mb-8">
-            <!-- Show time header if there are multiple time groups -->
-            <h2 v-if="groupedMatches.length > 1" class="text-xl font-bold text-blue-800 mb-4 text-center">
-              {{ timeGroup.time }}
-            </h2>
             <!-- Use grid layout for 6+ matches at same time, rows for fewer -->
             <div v-if="timeGroup.matches.length >= 6"
               class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-5 gap-2 sm:gap-3">
               <MatchCard v-for="match in timeGroup.matches" :key="match.id" :match="match" :compact="true" />
             </div>
             <div v-else class="space-y-4 sm:space-y-4">
-              <MatchCard v-for="match in timeGroup.matches" :key="match.id" :match="match" />
+              <MatchRow v-for="match in timeGroup.matches" :key="match.id" :match="match" />
             </div>
           </div>
         </template>
@@ -71,7 +67,7 @@
 // Imports Vue lifecycle and composables for match data
 import { onMounted, computed } from 'vue';
 import { usePinokeMatches } from '~/composables/usePinokeMatches';
-import MatchCard from '~/components/MatchCard.vue';
+import MatchCard from '~/components/MatchGrid.vue';
 
 // usePinokeMatches provides loading, error, matches, isToday, lastUpdate, and fetchMatches
 const { loading, error, matches, isToday, lastUpdate, fetchMatches } = usePinokeMatches();

@@ -10,4 +10,15 @@ export default defineNuxtConfig({
       tailwindcss(),
     ],
   },
+  app: {
+    head: {
+      title: 'Pinoké Wedstrijdschema',
+      htmlAttrs: {
+        lang: 'nl'
+      },
+      link: [
+        { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' }
+      ]
+    }
+  }
 })

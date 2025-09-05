@@ -7,12 +7,9 @@
 <!-- Seo data -->
 <script setup lang="ts">
 useSeoMeta({
-  title: 'Pinoke thuiswedstrijden',
+  title: 'Pinoké wedstrijdschema',
   description: 'Bekijk alle thuiswedstrijden die op dit moment plaatsvinden.',
-  ogTitle: 'Pinoke Thuiswedstrijden',
+  ogTitle: 'Pinoke wedstrijdschema',
   ogDescription: 'Bekijk alle thuiswedstrijden die op dit moment plaatsvinden.',
-  ogImage: '/img/logo_pinoke_blauw.webp',
-  ogImageWidth: 1200,
-  ogImageHeight: 630,
 });
 </script>

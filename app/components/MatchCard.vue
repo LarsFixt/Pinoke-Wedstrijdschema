@@ -7,12 +7,12 @@
           class="w-12 h-12 hidden sm:block rounded-full mb-2 sm:mb-0 mr-4" />
         <div class="text-center sm:text-left">
           <div
-            class="text-xl sm:text-3xl font-bold text-gray-800 mb-1 sm:mb-2 flex items-center justify-center sm:justify-start">
+            class="text-xl sm:text-5xl font-bold text-gray-800 mb-1 sm:mb-2 flex items-center justify-center sm:justify-start">
             {{ match.home_team_name || 'Home Team' }}
             <span class="text-blue-800 mx-2">-</span>
             {{ match.away_team_name || 'Away Team' }}
           </div>
-          <div class="flex items-center text-base sm:text-lg text-gray-600 justify-center sm:justify-start">
+          <div class="flex items-center text-base sm:text-3xl text-gray-600 justify-center sm:justify-start">
             <span class="inline-block w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
             Veld: <span class="font-semibold ml-1">{{ match.field || 'TBD' }}</span>
           </div>
@@ -21,10 +21,10 @@
           class="w-12 h-12 hidden sm:block rounded-full mb-2 sm:mb-0 ml-4" />
       </div>
       <div class="text-right sm:ml-6">
-        <div class="text-2xl sm:text-4xl font-bold text-blue-800">
+        <div class="text-2xl sm:text-5xl font-bold text-blue-800">
           {{ (match.time && match.time.length === 5) ? match.time : (match.time ? match.time.substring(0, 5) : 'TBD') }}
         </div>
-        <div class="text-xs sm:text-sm text-gray-500 mt-1">
+        <div class="text-xs sm:text-2xl text-gray-600 mt-1">
           {{ getMatchStatus(match) }}
         </div>
       </div>

@@ -4,13 +4,13 @@
       <div class="text-center mb-8 relative flex flex-col items-center">
         <h1 class="text-3xl sm:text-5xl font-bold text-blue-800 mb-4">Welkom op Pinoké</h1>
         <img src="/img/logo_pinoke_blauw.webp" alt="Pinoké Logo"
-          class="absolute hidden 2xl:block top-2 right-2 2xl:-top-10 2xl:-right-55 w-32 h-32 sm:w-60 sm:h-60 object-contain" />
+          class="absolute hidden 2xl:block top-2 right-2 2xl:-top-10 2xl:-right-60 w-32 h-32 sm:w-60 sm:h-60 object-contain" />
       </div>
       <div v-if="loading" class="text-center">
         <div class="inline-block animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-blue-800"></div>
         <p class="mt-4 text-gray-600 text-base sm:text-lg">Wedstrijden laden...</p>
       </div>
-      <div v-if="!loading" class="fade-in max-w-7xl mx-auto">
+      <div v-if="!loading" class="fade-in max-w-8xl mx-auto">
         <template v-if="!isToday">
           <div class="flex flex-col items-center justify-center">
             <div class="text-5xl sm:text-6xl mb-4">
@@ -47,13 +47,13 @@
         <p class="text-xl sm:text-2xl text-red-600">Kon wedstrijden niet laden</p>
         <p class="text-gray-500 mt-2 text-base sm:text-lg">Probeer de pagina te vernieuwen</p>
       </div>
-      <div class="text-center mt-8 sm:mt-12 text-xs sm:text-sm text-gray-500">
-        <p>Live tijden - automatisch bijgewerkt elke minuut</p>
+      <div class="text-center mt-8 sm:mt-12 text-lg text-gray-500">
         <p>Laatst bijgewerkt: <span class="font-semibold">{{ lastUpdate }}</span></p>
-        <div class="mt-4 flex items-center justify-center gap-1 text-gray-600">
+        <div class="mt-4 text-2xl flex items-center justify-center gap-1 text-gray-600">
           <span>2025 - Built with</span>
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5 text-blue-800">
-            <path d="m9.653 16.915-.005-.003-.019-.01a20.759 20.759 0 0 1-1.162-.682 22.045 22.045 0 0 1-2.582-1.9C4.045 12.733 2 10.352 2 7.5a4.5 4.5 0 0 1 8-2.828A4.5 4.5 0 0 1 18 7.5c0 2.852-2.044 5.233-3.885 6.82a22.049 22.049 0 0 1-3.744 2.582l-.019.01-.005.003h-.002a.739.739 0 0 1-.69.001l-.002-.001Z" />
+            <path
+              d="m9.653 16.915-.005-.003-.019-.01a20.759 20.759 0 0 1-1.162-.682 22.045 22.045 0 0 1-2.582-1.9C4.045 12.733 2 10.352 2 7.5a4.5 4.5 0 0 1 8-2.828A4.5 4.5 0 0 1 18 7.5c0 2.852-2.044 5.233-3.885 6.82a22.049 22.049 0 0 1-3.744 2.582l-.019.01-.005.003h-.002a.739.739 0 0 1-.69.001l-.002-.001Z" />
           </svg>
           <span>by <a href="https://github.com/LarsFixt" target="_blank" class="">LarsFixt</a></span>
         </div>

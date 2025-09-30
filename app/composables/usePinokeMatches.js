@@ -23,6 +23,9 @@ export function usePinokeMatches() {
      * @returns {Array} Filtered list of active matches
      */
     function filterActiveMatches(matchList) {
+
+        // const now = new Date("2025-09-06T08:20:00Z"); // Fixed time for testing
+
         const now = new Date();
         return matchList.filter(match => {
             if (!match.utcDate) return false;

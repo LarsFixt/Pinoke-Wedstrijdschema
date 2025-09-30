@@ -140,7 +140,7 @@ export default defineEventHandler(async (event) => {
     let allMatches = allCollectionMatches.flat();
 
     const now = DateTime.utc();
-    // const now = DateTime.fromISO("2025-09-06T20:01:00Z"); // Fixed time for testing
+    // const now = DateTime.fromISO("2025-10-04T20:01:00Z"); // Fixed time for testing
 
     // Filter and map home matches in one step
     allMatches = allMatches

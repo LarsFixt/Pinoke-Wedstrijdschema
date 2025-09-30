@@ -1,4 +1,4 @@
-import { ref } from 'vue';
+import { ref, onUnmounted } from 'vue';
 
 /**
  * Composable for managing Pinoke matches state and live updates.
@@ -16,6 +16,7 @@ export function usePinokeMatches() {
     /** True if showing today's matches */
     const isToday = ref(false);
     let updateInterval = null;
+    let fetchInterval = null;
 
     /**
      * Filters matches to only include those that are still active (not ended).
@@ -23,14 +24,25 @@ export function usePinokeMatches() {
      * @returns {Array} Filtered list of active matches
      */
     function filterActiveMatches(matchList) {
-
-        // const now = new Date("2025-09-06T08:20:00Z"); // Fixed time for testing
-
+        // const now = new Date("2025-10-04T10:30:00Z"); // Fixed time for testing
         const now = new Date();
         return matchList.filter(match => {
             if (!match.utcDate) return false;
             const matchDateTime = new Date(match.utcDate);
-            const endTime = new Date(matchDateTime.getTime() + 90 * 60 * 1000);
+
+            // Calculate match duration based on category
+            let durationMinutes = 90; // Default for senior matches
+
+            // Shorter durations for youth matches
+            if (match.category === 'Jongste jeugd') {
+                durationMinutes = 50; // O8, O9, O10 matches are shorter
+            } else if (match.sub_category && (match.sub_category.includes('Onder 12') || match.sub_category.includes('Onder 14'))) {
+                durationMinutes = 70; // O12, O14 matches
+            } else if (match.sub_category === 'Trimhockey') {
+                durationMinutes = 60; // Trimhockey is typically shorter
+            }
+
+            const endTime = new Date(matchDateTime.getTime() + durationMinutes * 60 * 1000);
             return now < endTime;
         });
     }
@@ -50,12 +62,14 @@ export function usePinokeMatches() {
      * Starts live updates for matches and periodic server fetches.
      */
     function startLiveUpdates() {
-        if (updateInterval) clearInterval(updateInterval);
+        stopLiveUpdates(); // Clear any existing intervals
+
         updateInterval = setInterval(() => {
             updateMatches();
         }, 60000); // Update every minute
+
         // Also fetch new matches from server every hour
-        setInterval(() => {
+        fetchInterval = setInterval(() => {
             fetchMatches();
         }, 3600000); // 1 hour
     }
@@ -67,6 +81,10 @@ export function usePinokeMatches() {
         if (updateInterval) {
             clearInterval(updateInterval);
             updateInterval = null;
+        }
+        if (fetchInterval) {
+            clearInterval(fetchInterval);
+            fetchInterval = null;
         }
     }
 
@@ -89,8 +107,8 @@ export function usePinokeMatches() {
             matches.value = data.matches || [];
             isToday.value = data.isToday || false;
 
-            if (matches.value) {
-                // filter out past matches if showing today's matches
+            // Filter out past matches if showing today's matches
+            if (isToday.value && matches.value.length > 0) {
                 matches.value = filterActiveMatches(matches.value);
             }
 
@@ -110,6 +128,10 @@ export function usePinokeMatches() {
         }
     }
 
+    // Cleanup intervals when composable is destroyed
+    onUnmounted(() => {
+        stopLiveUpdates();
+    });
 
     return {
         loading,

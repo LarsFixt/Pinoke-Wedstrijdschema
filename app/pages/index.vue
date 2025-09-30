@@ -25,9 +25,7 @@
           </div>
         </template>
         <template v-if="matches.length">
-          <div class="space-y-4 sm:space-y-4">
-            <MatchCard v-for="match in matches" :key="match.id" :match="match" />
-          </div>
+          <MatchCarousel :matches="matches" />
         </template>
         <template v-else>
           <div class="flex flex-col items-center justify-center">
@@ -66,7 +64,7 @@
 // Imports Vue lifecycle and composables for match data
 import { onMounted } from 'vue';
 import { usePinokeMatches } from '~/composables/usePinokeMatches';
-import MatchCard from '~/components/MatchCard.vue';
+import MatchCarousel from '~/components/MatchCarousel.vue';
 
 // usePinokeMatches provides loading, error, matches, isToday, lastUpdate, and fetchMatches
 const { loading, error, matches, isToday, lastUpdate, fetchMatches } = usePinokeMatches();

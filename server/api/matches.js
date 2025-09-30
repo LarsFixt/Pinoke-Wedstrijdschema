@@ -54,11 +54,23 @@ async function fetchCollections() {
 }
 
 /**
+ * Adds a delay to throttle requests
+ * @param {number} ms - Milliseconds to delay
+ * @returns {Promise<void>}
+ */
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/**
  * Fetches match data from a specific collection
  * @param {string} collectionName - Name of the collection to fetch
  * @returns {Promise<Array>} Array of match objects from the collection
  */
 async function fetchMatchesFromCollection(collectionName) {
+  // Add delay to throttle requests
+  await delay(100);
+
   const response = await fetch(`https://www.pinoke.nl/_dm/s/rt/actions/sites/c07b0251/collections/${collectionName}/`, {
     headers: {
       'User-Agent': 'Mozilla/5.0 (compatible; PinokeBot/1.0)',
@@ -112,10 +124,17 @@ export default defineEventHandler(async (event) => {
     // First fetch the list of collections
     const collectionNames = await fetchCollections();
 
-    // Fetch matches from all collections
-    const allCollectionMatches = await Promise.all(
-      collectionNames.map(collectionName => fetchMatchesFromCollection(collectionName))
-    );
+    // Fetch matches from only the first collection (contains next matches)
+    const allCollectionMatches = [];
+    if (collectionNames.length > 0) {
+      try {
+        const matches = await fetchMatchesFromCollection(collectionNames[0]);
+        allCollectionMatches.push(matches);
+      } catch (error) {
+        console.warn(`Error fetching collection ${collectionNames[0]}:`, error.message);
+        allCollectionMatches.push([]);
+      }
+    }
 
     // Flatten all matches into one array
     let allMatches = allCollectionMatches.flat();
@@ -153,6 +172,7 @@ export default defineEventHandler(async (event) => {
       serverTime: now.toISO()
     };
   } catch (err) {
+    console.error('Matches API error:', err);
     return {
       error: true,
       statusCode: 500,

@@ -1,6 +1,26 @@
 <template>
   <div class="bg-gradient-to-b from-blue-50 to-blue-100 min-h-screen">
-    <div class="container max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-6">
+    <!-- Left Sponsor Banner -->
+    <div class="hidden xl:block fixed left-2 top-1/2 -translate-y-1/2 w-48 2xl:w-64 z-10">
+      <div class="bg-white rounded-lg shadow-lg p-6 flex flex-col items-center justify-center h-[455px]">
+        <h2 class="text-xl font-bold text-blue-800 mb-2 text-center">Ook hier staan? Word sponsor van Pinoké!</h2>
+        <p class="text-gray-700 text-center mb-4">
+          Bereik duizenden hockeyfans en steun onze club.<br>
+          Neem contact op voor de sponsormogelijkheden.
+        </p>
+        <p class="text-blue-800 font-semibold text-xl text-center">
+          sponsoring@pinoke.nl
+        </p>
+      </div>
+    </div>
+
+    <!-- Right Sponsor Banner -->
+    <div class="hidden xl:block fixed right-2 top-1/2 -translate-y-1/2 w-48 2xl:w-64 z-10">
+      <img
+        src="https://dsbackend.s3.amazonaws.com/media/66e23aa6757244ac96eae21a8ad112be/e4e69f9c2c5c4737a4291f9a21488441/2/original.png"></img>
+    </div>
+
+    <div class="container max-w-[90rem] mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-6">
       <div class="text-center mb-8 relative flex flex-col items-center">
         <h1 class="text-3xl sm:text-5xl font-bold text-blue-800 mb-4">Welkom op Pinoké</h1>
         <img src="/img/logo_pinoke_blauw.webp" alt="Pinoké Logo"
@@ -10,7 +30,7 @@
         <div class="inline-block animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-blue-800"></div>
         <p class="mt-4 text-gray-600 text-base sm:text-lg">Wedstrijden laden...</p>
       </div>
-      <div v-if="!loading" class="fade-in max-w-8xl mx-auto">
+      <div v-if="!loading" class="fade-in mx-auto">
         <template v-if="!isToday">
           <div class="flex flex-col items-center justify-center">
             <div class="text-5xl sm:text-6xl mb-4">

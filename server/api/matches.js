@@ -121,26 +121,38 @@ async function fetchMatchesFromCollection(collectionName) {
  */
 export default defineEventHandler(async (event) => {
   try {
+    // Declare 'now' at the start, before any usage
+    const now = DateTime.utc();
+    // const now = DateTime.fromISO("2025-10-04T20:01:00Z"); // Fixed time for testing
+
     // First fetch the list of collections
     const collectionNames = await fetchCollections();
 
-    // Fetch matches from only the first collection (contains next matches)
+    // Fetch matches from collections until we find upcoming matches
     const allCollectionMatches = [];
-    if (collectionNames.length > 0) {
+    for (const collectionName of collectionNames) {
       try {
-        const matches = await fetchMatchesFromCollection(collectionNames[0]);
+        const matches = await fetchMatchesFromCollection(collectionName);
         allCollectionMatches.push(matches);
+
+        // Check if this collection has any future matches
+        const hasUpcomingMatches = matches.some(m => {
+          const match = m.data;
+          if (match?.location?.name !== 'Amsterdamse Bos (Pinoké)') return false;
+          const utcDate = parseAmsterdamDate(match.date, match.time);
+          return utcDate && utcDate.isValid && utcDate.toISO().split('T')[0] >= now.toISO().split('T')[0];
+        });
+
+        // If we found upcoming matches, we can stop fetching more collections
+        if (hasUpcomingMatches) break;
       } catch (error) {
-        console.warn(`Error fetching collection ${collectionNames[0]}:`, error.message);
+        console.warn(`Error fetching collection ${collectionName}:`, error.message);
         allCollectionMatches.push([]);
       }
     }
 
     // Flatten all matches into one array
     let allMatches = allCollectionMatches.flat();
-
-    const now = DateTime.utc();
-    // const now = DateTime.fromISO("2025-10-04T20:01:00Z"); // Fixed time for testing
 
     // Filter and map home matches in one step
     allMatches = allMatches

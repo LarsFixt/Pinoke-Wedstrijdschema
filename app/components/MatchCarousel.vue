@@ -2,7 +2,8 @@
     <div class="relative">
         <!-- Current slide of matches -->
         <div class="space-y-4 sm:space-y-4 min-h-[600px]">
-            <MatchCard v-for="match in currentMatches" :key="match.id" :match="match" />
+            <MatchCard v-for="match in currentMatchesWithSponsor" :key="match._key" :match="match"
+                :is-sponsor="match.isSponsor" />
         </div>
 
         <!-- Pagination dots if there are multiple slides -->
@@ -25,22 +26,52 @@ const props = defineProps({
     }
 });
 
-const MATCHES_PER_SLIDE = 6;
+const MATCHES_PER_PAGE = 5;
 const SLIDE_DURATION = 15000; // 15 seconds
 
 const currentSlide = ref(0);
 let slideInterval = null;
 
-// Calculate total number of slides
+// Calculate total number of slides (each slide: 5 matches + 1 sponsor)
 const totalSlides = computed(() =>
-    Math.ceil(props.matches.length / MATCHES_PER_SLIDE)
+    Math.ceil(props.matches.length / MATCHES_PER_PAGE)
 );
 
-// Get matches for current slide
+// Get matches for current slide (max 5 per page)
 const currentMatches = computed(() => {
-    const start = currentSlide.value * MATCHES_PER_SLIDE;
-    const end = start + MATCHES_PER_SLIDE;
+    const start = currentSlide.value * MATCHES_PER_PAGE;
+    const end = start + MATCHES_PER_PAGE;
     return props.matches.slice(start, end);
+});
+
+// Dummy sponsor card object
+const sponsorCard = {
+    isSponsor: true,
+    _key: 'sponsor-card-' + Math.random().toString(36).slice(2),
+    // Minimal match object for prop requirements
+    home_team_name: '',
+    away_team_name: '',
+    field: '',
+    referees: '',
+    time: '',
+    category: '',
+    sub_category: '',
+    home_team_club_logo_url: '',
+    away_team_club_logo_url: '',
+    utcDate: null
+};
+
+// Inject sponsor card into a random position in the current page (total 6 cards per page)
+const currentMatchesWithSponsor = computed(() => {
+    const matches = [...currentMatches.value];
+    // Ensure max 5 matches per page
+    if (matches.length > MATCHES_PER_PAGE) matches.length = MATCHES_PER_PAGE;
+    const pos = Math.floor(Math.random() * (matches.length + 1));
+    matches.splice(pos, 0, { ...sponsorCard, _key: sponsorCard._key + '-' + currentSlide.value });
+    return matches.map((m, idx) => ({
+        ...m,
+        _key: m._key || (m.isSponsor ? sponsorCard._key + '-' + currentSlide.value : (m.id || idx))
+    }));
 });
 
 // Clear existing interval

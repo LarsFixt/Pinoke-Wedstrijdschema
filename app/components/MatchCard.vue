@@ -3,45 +3,68 @@
     <div class="bg-gradient-to-r from-blue-700 to-blue-800 rounded-t-xl px-3 py-1">
     </div>
     <div class="py-2 px-4">
-      <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-        <div class="flex-1 flex items-center flex-col sm:flex-row">
-          <img v-if="match.home_team_club_logo_url" :src="match.home_team_club_logo_url" alt="Home club logo"
-            class="w-16 h-16 hidden sm:block rounded-full mb-2 sm:mb-0 mr-4" />
-          <div class="text-center sm:text-left">
-            <div
-              class="text-xl sm:text-4xl font-bold text-gray-800 mb-1 sm:mb-2 flex items-center justify-center sm:justify-start">
-              {{ match.home_team_name || 'Home Team' }}
-              <span class="text-blue-800 mx-2">-</span>
-              {{ match.away_team_name || 'Away Team' }}
-            </div>
-            <div class="flex items-center text-base sm:text-3xl text-gray-600 justify-center sm:justify-start">
-              <span class="inline-block w-2 h-2 bg-blue-800 rounded-full mr-2"></span>
-              Veld: <span class="font-semibold ml-1">{{ match.field || 'TBD' }}</span>
-            </div>
-            <div v-if="match.referees"
-              class="flex items-center text-base sm:text-xl text-gray-600 justify-center sm:justify-start">
-              <span class="inline-block w-2 h-2 bg-yellow-400 rounded-full mr-2"></span>
-              Scheidsrechters: <span class="font-semibold ml-1">{{ match.referees }}</span>
+      <template v-if="isSponsor">
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 h-28">
+          <div class="flex-1 flex items-center flex-col sm:flex-row">
+            <div class="text-center sm:text-left w-full">
+              <div
+                class="text-xl sm:text-4xl font-bold text-gray-800 mb-1 sm:mb-2 flex items-center justify-center sm:justify-start">
+                Tussen deze wedstrijden uw logo?
+              </div>
+              <div class="flex items-center text-base sm:text-xl text-gray-600 justify-center sm:justify-start mb-2">
+                Word sponsor van Pinoké en bereik duizenden hockeyfans!
+              </div>
             </div>
           </div>
-          <img v-if="match.away_team_club_logo_url" :src="match.away_team_club_logo_url" alt="Away club logo"
-            class="w-16 h-16 hidden sm:block rounded-full mb-2 sm:mb-0 ml-4" />
-        </div>
-        <div class="text-right sm:ml-6">
-          <div class="text-2xl sm:text-4xl font-bold text-blue-800">
-            {{ (match.time && match.time.length === 5) ? match.time : (match.time ? match.time.substring(0, 5) : 'TBD')
-            }}
-          </div>
-          <div class="text-xs sm:text-sm text-gray-500 mb-1">
-            {{ getMatchStatus(match) }}
-          </div>
-          <div class="mt-2 text-right">
-            <span class="inline-block bg-blue-100 text-blue-800 text-lg px-2 py-1 rounded-full">
-              {{ match.category }} - {{ match.sub_category }}
-            </span>
+          <div class="text-right sm:ml-6 flex flex-col justify-center items-end">
+            <div class="text-xl sm:text-2xl font-bold text-blue-800">
+              sponsoring@pinoke.nl
+            </div>
           </div>
         </div>
-      </div>
+      </template>
+      <template v-else>
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+          <div class="flex-1 flex items-center flex-col sm:flex-row">
+            <img v-if="match.home_team_club_logo_url" :src="match.home_team_club_logo_url" alt="Home club logo"
+              class="w-16 h-16 hidden sm:block rounded-full mb-2 sm:mb-0 mr-4" />
+            <div class="text-center sm:text-left">
+              <div
+                class="text-xl sm:text-4xl font-bold text-gray-800 mb-1 sm:mb-2 flex items-center justify-center sm:justify-start">
+                {{ match.home_team_name || 'Home Team' }}
+                <span class="text-blue-800 mx-2">-</span>
+                {{ match.away_team_name || 'Away Team' }}
+              </div>
+              <div class="flex items-center text-base sm:text-3xl text-gray-600 justify-center sm:justify-start">
+                <span class="inline-block w-2 h-2 bg-blue-800 rounded-full mr-2"></span>
+                Veld: <span class="font-semibold ml-1">{{ match.field || 'TBD' }}</span>
+              </div>
+              <div v-if="match.referees"
+                class="flex items-center text-base sm:text-xl text-gray-600 justify-center sm:justify-start">
+                <span class="inline-block w-2 h-2 bg-yellow-400 rounded-full mr-2"></span>
+                Scheidsrechters: <span class="font-semibold ml-1">{{ match.referees }}</span>
+              </div>
+            </div>
+            <img v-if="match.away_team_club_logo_url" :src="match.away_team_club_logo_url" alt="Away club logo"
+              class="w-16 h-16 hidden sm:block rounded-full mb-2 sm:mb-0 ml-4" />
+          </div>
+          <div class="text-right sm:ml-6">
+            <div class="text-2xl sm:text-4xl font-bold text-blue-800">
+              {{ (match.time && match.time.length === 5) ? match.time : (match.time ? match.time.substring(0, 5) :
+                'TBD')
+              }}
+            </div>
+            <div class="text-xs sm:text-sm text-gray-500 mb-1">
+              {{ getMatchStatus(match) }}
+            </div>
+            <div class="mt-2 text-right">
+              <span class="inline-block bg-blue-100 text-blue-800 text-lg px-2 py-1 rounded-full">
+                {{ match.category }} - {{ match.sub_category }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </template>
     </div>
   </div>
 </template>
@@ -50,7 +73,8 @@
 import { ref, onMounted, onUnmounted } from 'vue';
 
 const props = defineProps({
-  match: { type: Object, required: true }
+  match: { type: Object, required: true },
+  isSponsor: { type: Boolean, default: false }
 });
 
 const now = ref(new Date());

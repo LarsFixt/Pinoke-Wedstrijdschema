@@ -35,7 +35,8 @@
                 <span class="text-blue-800 mx-2">-</span>
                 {{ match.away_team_name || 'Away Team' }}
               </div>
-              <div class="flex items-center text-base sm:text-3xl text-gray-600 justify-center sm:justify-start">
+              <div class="flex items-center text-base sm:text-3xl text-gray-600 justify-center sm:justify-start"
+                v-if="!match.isOnViaplay">
                 <span class="inline-block w-2 h-2 bg-blue-800 rounded-full mr-2"></span>
                 Veld: <span class="font-semibold ml-1">{{ match.field || 'TBD' }}</span>
               </div>
@@ -47,6 +48,11 @@
             </div>
             <img v-if="match.away_team_club_logo_url" :src="match.away_team_club_logo_url" alt="Away club logo"
               class="w-16 h-16 hidden sm:block rounded-full mb-2 sm:mb-0 ml-4" />
+          </div>
+          <div v-if="match.isOnViaplay" class="flex items-center justify-center py-1">
+            <span class="inline-block bg-rose-600 text-white text-2xl px-3 py-1 rounded-full font-bold">
+              Live op Viaplay!
+            </span>
           </div>
           <div class="text-right sm:ml-6">
             <div class="text-2xl sm:text-4xl font-bold text-blue-800">

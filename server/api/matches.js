@@ -87,6 +87,37 @@ async function fetchMatchesFromCollection(collectionName) {
 }
 
 /**
+ * Checks if a Pinoké match (Dames 01 or Heren 01) is broadcasted on Viaplay for the given date.
+ * @param {Array} viaplayProducts - Array of products from Viaplay API
+ * @param {Object} match - Pinoké match object
+ * @returns {boolean}
+ */
+function isMatchOnViaplay(viaplayProducts, match) {
+  if (!match || !match.date || !match.home_team_name || !match.away_team_name) return false;
+  // Determine if this is a Heren 01 or Dames 01 match
+  const isHeren01 = match.home_team_name.includes('Heren 01') || match.away_team_name.includes('Heren 01');
+  const isDames01 = match.home_team_name.includes('Dames 01') || match.away_team_name.includes('Dames 01');
+  if (!isHeren01 && !isDames01) return false;
+
+  return viaplayProducts.some(product => {
+    const prod = product.content;
+    if (!prod || !prod.title || !product.epg?.start) return false;
+    const viaplayDate = DateTime.fromISO(product.epg.start).toFormat('dd-MM-yyyy');
+    if (viaplayDate !== match.date) return false;
+    // Only match if originalTitle matches the team type
+    if (isHeren01 && prod.originalTitle === 'Heren') {
+      const teams = [prod.title, prod.originalTitle, prod.synopsis, prod.description?.editorial].join(' ').toLowerCase();
+      return teams.includes('pinoké') || teams.includes('pinoke');
+    }
+    if (isDames01 && prod.originalTitle === 'Dames') {
+      const teams = [prod.title, prod.originalTitle, prod.synopsis, prod.description?.editorial].join(' ').toLowerCase();
+      return teams.includes('pinoké') || teams.includes('pinoke');
+    }
+    return false;
+  });
+}
+
+/**
  * Nuxt API route handler for fetching upcoming Pinoké home matches
  *
  * @route GET /api/matches
@@ -121,9 +152,8 @@ async function fetchMatchesFromCollection(collectionName) {
  */
 export default defineEventHandler(async (event) => {
   try {
-    // Declare 'now' at the start, before any usage
-    const now = DateTime.utc();
-    // const now = DateTime.fromISO("2025-10-04T20:01:00Z"); // Fixed time for testing
+    // const now = DateTime.utc();
+    const now = DateTime.fromISO("2025-11-16T16:00:00Z"); // Fixed time for testing
 
     // First fetch the list of collections
     const collectionNames = await fetchCollections();
@@ -154,15 +184,50 @@ export default defineEventHandler(async (event) => {
     // Flatten all matches into one array
     let allMatches = allCollectionMatches.flat();
 
-    // Filter and map home matches in one step
+    // Fetch Viaplay API for the current date
+    let viaplayProducts = [];
+    try {
+      const viaplayRes = await fetch('https://content.viaplay.com/pcdash-nl/sport/hockey/tulp-hoofdklasse-hockey?date=' + now.toFormat('yyyy-MM-dd'));
+      if (viaplayRes.ok) {
+        const viaplayJson = await viaplayRes.json();
+        // Find the block with type 'list' and title 'Huidige uitzendingen'
+        const blocks = viaplayJson?._embedded?.['viaplay:blocks'] || [];
+        const listBlock = blocks.find(b => b.type === 'list' && b.title === 'Huidige uitzendingen');
+        viaplayProducts = listBlock?._embedded?.['viaplay:products'] || [];
+      }
+    } catch (err) {
+      console.warn('Failed to fetch Viaplay schedule:', err.message);
+    }
+
+    // Main filter: all home matches, plus away matches for Heren 01/Dames 01 if on Viaplay
     allMatches = allMatches
       .map(m => m.data)
-      .filter(match => match?.location?.name === 'Amsterdamse Bos (Pinoké)')
       .map(match => {
         const utcDate = parseAmsterdamDate(match.date, match.time);
-        return { ...match, utcDate: utcDate && utcDate.isValid ? utcDate : null };
+        let isOnViaplay = false;
+        if (
+          (match.home_team_name?.includes('Heren 01') || match.away_team_name?.includes('Heren 01')) ||
+          (match.home_team_name?.includes('Dames 01') || match.away_team_name?.includes('Dames 01'))
+        ) {
+          isOnViaplay = isMatchOnViaplay(viaplayProducts, match);
+        }
+        return { ...match, utcDate: utcDate && utcDate.isValid ? utcDate : null, isOnViaplay };
       })
-      .filter(match => match.utcDate && match.utcDate.toISO().split('T')[0] >= now.toISO().split('T')[0]);
+      .filter(match => {
+        // Show all home matches
+        if (match.location?.name === 'Amsterdamse Bos (Pinoké)') {
+          return match.utcDate && match.utcDate.toISO().split('T')[0] >= now.toISO().split('T')[0];
+        }
+        // Show away matches only for Heren 01/Dames 01 if on Viaplay
+        if (
+          ((match.home_team_name?.includes('Heren 01') || match.away_team_name?.includes('Heren 01')) ||
+           (match.home_team_name?.includes('Dames 01') || match.away_team_name?.includes('Dames 01')))
+          && match.isOnViaplay
+        ) {
+          return match.utcDate && match.utcDate.toISO().split('T')[0] >= now.toISO().split('T')[0];
+        }
+        return false;
+      });
 
     // Sort by date
     allMatches.sort((a, b) => a.utcDate - b.utcDate);

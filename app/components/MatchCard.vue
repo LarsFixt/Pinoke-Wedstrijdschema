@@ -1,6 +1,8 @@
 <template>
-  <div class="bg-white rounded-xl shadow-lg border border-gray-200 fade-in hover:shadow-xl transition-shadow">
+  <div class="bg-white rounded-xl shadow-lg border border-gray-200 fade-in hover:shadow-xl transition-shadow"
+    :class="{ 'opacity-60 pointer-events-none': match.is_cancelled }">
     <div class="bg-gradient-to-r from-blue-700 to-blue-800 rounded-t-xl px-3 py-1">
+
     </div>
     <div class="py-2 px-4">
       <template v-if="isSponsor">
@@ -70,6 +72,11 @@
             </div>
           </div>
         </div>
+        <div v-if="match.is_cancelled" class="mt-4 text-center">
+          <span class="inline-block bg-red-100 text-red-700 text-lg px-3 py-1 rounded-full font-semibold">
+            Deze wedstrijd is afgelast.
+          </span>
+        </div>
       </template>
     </div>
   </div>
@@ -117,6 +124,13 @@ function getMatchStatus(match) {
 <style scoped>
 .fade-in {
   animation: fadeIn 0.5s ease-in;
+}
+
+/* Optional: visually gray out cancelled matches */
+.opacity-60 {
+  opacity: 0.6;
+  transition: opacity 0.2s;
+  pointer-events: none;
 }
 
 @keyframes fadeIn {

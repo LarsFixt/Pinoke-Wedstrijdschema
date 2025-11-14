@@ -152,8 +152,8 @@ function isMatchOnViaplay(viaplayProducts, match) {
  */
 export default defineEventHandler(async (event) => {
   try {
-    // const now = DateTime.utc();
-    const now = DateTime.fromISO("2025-11-16T16:00:00Z"); // Fixed time for testing
+    const now = DateTime.utc();
+    // const now = DateTime.fromISO("2025-11-16T16:00:00Z"); // Fixed time for testing
 
     // First fetch the list of collections
     const collectionNames = await fetchCollections();
@@ -221,7 +221,7 @@ export default defineEventHandler(async (event) => {
         // Show away matches only for Heren 01/Dames 01 if on Viaplay
         if (
           ((match.home_team_name?.includes('Heren 01') || match.away_team_name?.includes('Heren 01')) ||
-           (match.home_team_name?.includes('Dames 01') || match.away_team_name?.includes('Dames 01')))
+            (match.home_team_name?.includes('Dames 01') || match.away_team_name?.includes('Dames 01')))
           && match.isOnViaplay
         ) {
           return match.utcDate && match.utcDate.toISO().split('T')[0] >= now.toISO().split('T')[0];

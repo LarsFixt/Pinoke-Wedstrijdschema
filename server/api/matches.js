@@ -153,7 +153,7 @@ function isMatchOnViaplay(viaplayProducts, match) {
 export default defineEventHandler(async (event) => {
   try {
     const now = DateTime.utc();
-    // const now = DateTime.fromISO("2025-11-16T16:00:00Z"); // Fixed time for testing
+    // const now = DateTime.fromISO("2025-12-06T16:00:00Z"); // Fixed time for testing
 
     // First fetch the list of collections
     const collectionNames = await fetchCollections();
@@ -205,17 +205,28 @@ export default defineEventHandler(async (event) => {
       .map(match => {
         const utcDate = parseAmsterdamDate(match.date, match.time);
         let isOnViaplay = false;
+        // Add Blaashal prefix for Pinoké Dome fields
+        let field = match.field;
+        if (
+          match.location?.name === 'Pinoké Dome' &&
+          (field === 'Veld 1' || field === 'Veld 2')
+        ) {
+          field = `Blaashal ${field}`;
+        }
         if (
           (match.home_team_name?.includes('Heren 01') || match.away_team_name?.includes('Heren 01')) ||
           (match.home_team_name?.includes('Dames 01') || match.away_team_name?.includes('Dames 01'))
         ) {
           isOnViaplay = isMatchOnViaplay(viaplayProducts, match);
         }
-        return { ...match, utcDate: utcDate && utcDate.isValid ? utcDate : null, isOnViaplay };
+        return { ...match, field, utcDate: utcDate && utcDate.isValid ? utcDate : null, isOnViaplay };
       })
       .filter(match => {
-        // Show all home matches
-        if (match.location?.name === 'Amsterdamse Bos (Pinoké)') {
+        // Show all home matches (outdoor and indoor)
+        if (
+          match.location?.name === 'Amsterdamse Bos (Pinoké)' ||
+          match.location?.name === 'Pinoké Dome'
+        ) {
           return match.utcDate && match.utcDate.toISO().split('T')[0] >= now.toISO().split('T')[0];
         }
         // Show away matches only for Heren 01/Dames 01 if on Viaplay

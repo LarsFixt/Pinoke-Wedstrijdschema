@@ -40,6 +40,8 @@ export function usePinokeMatches() {
                 durationMinutes = 70; // O12, O14 matches
             } else if (match.sub_category === 'Trimhockey') {
                 durationMinutes = 60; // Trimhockey is typically shorter
+            } else if (match.field === 'Blaashal Veld 1' || match.field === 'Blaashal Veld 2') {
+                durationMinutes = 50; // Indoor matches are shorter
             }
 
             const endTime = new Date(matchDateTime.getTime() + durationMinutes * 60 * 1000);

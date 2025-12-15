@@ -1,5 +1,12 @@
-// Feature flag to enable/disable Viaplay integration
-const USE_VIAPLAY = false; // Set to false to disable Viaplay integration
+// Configuration
+const USE_VIAPLAY = false;
+const CACHE_DURATION_MS = 30 * 60 * 1000; // 30 minutes
+const REQUEST_DELAY_MS = 100;
+const MAX_NEXT_MATCHES = 4;
+const HOME_LOCATIONS = ['Amsterdamse Bos (Pinoké)', 'Pinoké Dome'];
+const PINOKE_BASE_URL = 'https://www.pinoke.nl';
+const PINOKE_API_BASE = `${PINOKE_BASE_URL}/_dm/s/rt/actions/sites/c07b0251/collections`;
+
 /**
  * API endpoint to fetch and return upcoming home matches for Pinoké.
  *
@@ -20,10 +27,9 @@ const USE_VIAPLAY = false; // Set to false to disable Viaplay integration
 
 import { DateTime } from 'luxon';
 
-// In-memory cache for matches endpoint
+// In-memory cache
 let matchesCache = null;
 let matchesCacheTime = 0;
-const CACHE_DURATION_MS = 30 * 60 * 1000; // 30 minutes
 
 /**
  * Parses a date and time string from Amsterdam timezone to UTC
@@ -41,28 +47,33 @@ function parseAmsterdamDate(dateStr, timeStr) {
 }
 
 /**
+ * Common headers for Pinoké API requests
+ */
+const PINOKE_API_HEADERS = {
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:146.0) Gecko/20100101 Firefox/146.0',
+  'Accept': '*/*',
+  'Accept-Language': 'nl,en-US;q=0.7,en;q=0.3',
+  'Accept-Encoding': 'gzip, deflate, br, zstd',
+  'Referer': `${PINOKE_BASE_URL}/wedstrijdschema`,
+  'Content-Type': 'application/json',
+  'Sec-Fetch-Dest': 'empty',
+  'Sec-Fetch-Mode': 'cors',
+  'Sec-Fetch-Site': 'same-origin',
+  'Connection': 'keep-alive',
+  'Sec-GPC': '1',
+  'Pragma': 'no-cache',
+  'Cache-Control': 'no-cache',
+  'TE': 'trailers',
+};
+
+/**
  * Fetches the list of available match collections from Pinoké website
  * @returns {Promise<string[]>} Array of collection names
  * @throws {Error} When the API request fails
  */
 async function fetchCollections() {
-  const response = await fetch('https://www.pinoke.nl/_dm/s/rt/actions/sites/c07b0251/collections/Toekomstige_wedstrijden/', {
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:146.0) Gecko/20100101 Firefox/146.0',
-      'Accept': '*/*',
-      'Accept-Language': 'nl,en-US;q=0.7,en;q=0.3',
-      'Accept-Encoding': 'gzip, deflate, br, zstd',
-      'Referer': 'https://www.pinoke.nl/wedstrijdschema',
-      'Content-Type': 'application/json',
-      'Sec-Fetch-Dest': 'empty',
-      'Sec-Fetch-Mode': 'cors',
-      'Sec-Fetch-Site': 'same-origin',
-      'Connection': 'keep-alive',
-      'Sec-GPC': '1',
-      'Pragma': 'no-cache',
-      'Cache-Control': 'no-cache',
-      'TE': 'trailers',
-    }
+  const response = await fetch(`${PINOKE_API_BASE}/Toekomstige_wedstrijden/`, {
+    headers: PINOKE_API_HEADERS
   });
 
   if (!response.ok) {
@@ -89,27 +100,10 @@ function delay(ms) {
  * @returns {Promise<Array>} Array of match objects from the collection
  */
 async function fetchMatchesFromCollection(collectionName) {
-  // Add delay to throttle requests
-  await delay(100);
+  await delay(REQUEST_DELAY_MS);
 
-  const response = await fetch(`https://www.pinoke.nl/_dm/s/rt/actions/sites/c07b0251/collections/${collectionName}/`, {
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:146.0) Gecko/20100101 Firefox/146.0',
-      'Accept': '*/*',
-      'Accept-Language': 'nl,en-US;q=0.7,en;q=0.3',
-      'Accept-Encoding': 'gzip, deflate, br, zstd',
-      'Referer': 'https://www.pinoke.nl/wedstrijdschema',
-      'Content-Type': 'application/json',
-      'Sec-Fetch-Dest': 'empty',
-      'Sec-Fetch-Mode': 'cors',
-      'Sec-Fetch-Site': 'same-origin',
-      'Connection': 'keep-alive',
-      'Sec-GPC': '1',
-      'Pragma': 'no-cache',
-      'Cache-Control': 'no-cache',
-      'TE': 'trailers',
-      // 'Cookie': '', // Add cookies here if needed
-    }
+  const response = await fetch(`${PINOKE_API_BASE}/${collectionName}/`, {
+    headers: PINOKE_API_HEADERS
   });
 
   if (!response.ok) {
@@ -119,6 +113,33 @@ async function fetchMatchesFromCollection(collectionName) {
 
   const data = await response.json();
   return JSON.parse(data.value || '[]');
+}
+
+/**
+ * Calculates match duration in minutes based on category and location
+ * @param {Object} match - Match object
+ * @returns {number} Duration in minutes
+ */
+function getMatchDuration(match) {
+  if (match.category === 'Jongste jeugd') return 50;
+  if (match.sub_category?.includes('Onder 12') || match.sub_category?.includes('Onder 14')) return 70;
+  if (match.sub_category === 'Trimhockey') return 60;
+  if (match.field === 'Blaashal Veld 1' || match.field === 'Blaashal Veld 2') return 50;
+  return 90; // Default for senior matches
+}
+
+/**
+ * Checks if a match has finished
+ * @param {Object} match - Match object with utcDate
+ * @param {Date} currentTime - Current time to compare against
+ * @returns {boolean} True if match is still ongoing or hasn't started
+ */
+function isMatchActive(match, currentTime) {
+  if (!match.utcDate) return false;
+  const matchDateTime = new Date(match.utcDate.toISO());
+  const durationMinutes = getMatchDuration(match);
+  const endTime = new Date(matchDateTime.getTime() + durationMinutes * 60 * 1000);
+  return currentTime < endTime;
 }
 
 /**
@@ -188,12 +209,12 @@ function isMatchOnViaplay(viaplayProducts, match) {
 
 export default defineEventHandler(async (event) => {
   const now = DateTime.utc();
+
   // Serve from cache if fresh
   if (matchesCache && (Date.now() - matchesCacheTime < CACHE_DURATION_MS)) {
     return { ...matchesCache, serverTime: now.toISO() };
   }
   try {
-    // ...existing code for fetching and processing matches...
     // First fetch the list of collections
     const collectionNames = await fetchCollections();
 
@@ -207,9 +228,9 @@ export default defineEventHandler(async (event) => {
         // Check if this collection has any future matches
         const hasUpcomingMatches = matches.some(m => {
           const match = m.data;
-          if (match?.location?.name !== 'Amsterdamse Bos (Pinoké)') return false;
+          if (!HOME_LOCATIONS.includes(match?.location?.name)) return false;
           const utcDate = parseAmsterdamDate(match.date, match.time);
-          return utcDate && utcDate.isValid && utcDate.toISO().split('T')[0] >= now.toISO().split('T')[0];
+          return utcDate?.isValid && utcDate.toISO().split('T')[0] >= now.toISO().split('T')[0];
         });
 
         // If we found upcoming matches, we can stop fetching more collections
@@ -273,22 +294,18 @@ export default defineEventHandler(async (event) => {
         return { ...match, field, utcDate: utcDate && utcDate.isValid ? utcDate : null, isOnViaplay };
       })
       .filter(match => {
-        // Show all home matches (outdoor and indoor)
-        if (
-          match.location?.name === 'Amsterdamse Bos (Pinoké)' ||
-          match.location?.name === 'Pinoké Dome'
-        ) {
-          return match.utcDate && match.utcDate.toISO().split('T')[0] >= now.toISO().split('T')[0];
-        }
-        // Show away matches only for Heren 01/Dames 01 if on Viaplay
-        if (
-          ((match.home_team_name?.includes('Heren 01') || match.away_team_name?.includes('Heren 01')) ||
-            (match.home_team_name?.includes('Dames 01') || match.away_team_name?.includes('Dames 01')))
-          && match.isOnViaplay
-        ) {
-          return match.utcDate && match.utcDate.toISO().split('T')[0] >= now.toISO().split('T')[0];
-        }
-        return false;
+        const isHomeMatch = HOME_LOCATIONS.includes(match.location?.name);
+        const isFutureMatch = match.utcDate && match.utcDate.toISO().split('T')[0] >= now.toISO().split('T')[0];
+        const isFirstTeam = match.home_team_name?.includes('Heren 01') ||
+                           match.away_team_name?.includes('Heren 01') ||
+                           match.home_team_name?.includes('Dames 01') ||
+                           match.away_team_name?.includes('Dames 01');
+
+        // Show all home matches
+        if (isHomeMatch) return isFutureMatch;
+
+        // Show away matches only for first teams if on Viaplay
+        return isFirstTeam && match.isOnViaplay && isFutureMatch;
       });
 
     // Sort by date
@@ -297,22 +314,40 @@ export default defineEventHandler(async (event) => {
     // Find today's matches
     const todayISO = now.toISO().split('T')[0];
 
-    let matchesToReturn = allMatches.filter(match => match.utcDate.toISO().split('T')[0] === todayISO);
+    const currentTime = new Date(now.toISO());
 
-    // If no matches today, find next available date with matches and return maximum 4 matches
+    // Filter today's active matches
+    let matchesToReturn = allMatches.filter(match =>
+      match.utcDate.toISO().split('T')[0] === todayISO &&
+      isMatchActive(match, currentTime)
+    );
+
+    let isTodayResult = matchesToReturn.length > 0;
+
+    // If no active matches today, get next available date
     if (matchesToReturn.length === 0 && allMatches.length > 0) {
-      const nextDate = allMatches[0].utcDate.toISO().split('T')[0];
-      matchesToReturn = allMatches.filter(match => match.utcDate.toISO().split('T')[0] === nextDate).slice(0, 4);
+      const nextMatch = allMatches.find(match => match.utcDate.toISO().split('T')[0] > todayISO);
+      if (nextMatch) {
+        const nextDate = nextMatch.utcDate.toISO().split('T')[0];
+        matchesToReturn = allMatches
+          .filter(match => match.utcDate.toISO().split('T')[0] === nextDate)
+          .slice(0, MAX_NEXT_MATCHES);
+        isTodayResult = false;
+      }
     }
 
     // Store in cache
     matchesCache = {
       matches: matchesToReturn,
-      isToday: matchesToReturn.some(match => match.utcDate.toISO().split('T')[0] === todayISO),
+      isToday: isTodayResult,
     };
     matchesCacheTime = Date.now();
 
-    return { ...matchesCache, serverTime: now.toISO() };
+    return {
+      matches: matchesToReturn,
+      isToday: isTodayResult,
+      serverTime: now.toISO()
+    };
   } catch (err) {
     console.error('Matches API error:', err);
     return {

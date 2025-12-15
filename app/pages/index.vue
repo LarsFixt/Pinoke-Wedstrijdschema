@@ -7,26 +7,26 @@
         <img src="/img/logo_pinoke_blauw.webp" alt="Pinoké Logo"
           class="absolute hidden 2xl:block top-2 right-2 2xl:-top-10 2xl:-right-60 w-32 h-32 sm:w-60 sm:h-60 object-contain" />
       </div>
-      <div v-if="loading" class="text-center">
-        <div class="inline-block animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-blue-800">
-        </div>
-        <p class="mt-4 text-gray-600 text-base sm:text-lg">Wedstrijden laden...</p>
+      <div v-if="loading" class="text-center min-h-[60vh] flex flex-col items-center justify-center gap-4">
+        <img src="/img/logo_pinoke_blauw.webp" alt="Pinoké Logo" class="h-60 animate-bounce" />
+
       </div>
       <div v-if="!loading" class="fade-in mx-auto">
-        <template v-if="!isToday">
+        <template v-if="!isToday && matches.length">
           <div class="flex flex-col items-center justify-center">
             <div class="text-5xl sm:text-6xl mb-4">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
-                stroke="currentColor" class="h-10 sm:h-12 text-gray-600">
+                stroke="currentColor" class="size-6">
                 <path stroke-linecap="round" stroke-linejoin="round"
-                  d="M3 8.689c0-.864.933-1.406 1.683-.977l7.108 4.061a1.125 1.125 0 0 1 0 1.954l-7.108 4.061A1.125 1.125 0 0 1 3 16.811V8.69ZM12.75 8.689c0-.864.933-1.406 1.683-.977l7.108 4.061a1.125 1.125 0 0 1 0 1.954l-7.108 4.061a1.125 1.125 0 0 1-1.683-.977V8.69Z" />
+                  d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" />
               </svg>
             </div>
             <p class="text-xl sm:text-2xl text-gray-800 mb-2">Geen thuiswedstrijden vandaag</p>
             <div class="mb-2 text-xl sm:text-2xl text-blue-800 font-semibold">Aankomende thuiswedstrijden:</div>
           </div>
+          <MatchCarousel :matches="matches" />
         </template>
-        <template v-if="matches.length">
+        <template v-else-if="matches.length">
           <MatchCarousel :matches="matches" />
         </template>
         <template v-else>
@@ -42,8 +42,14 @@
           </div>
         </template>
       </div>
-      <div v-if="error" class="fade-in text-center">
-        <div class="text-5xl sm:text-6xl mb-4">⚠️</div>
+      <div v-if="error" class="fade-in flex flex-col items-center justify-center min-h-[60vh] text-center">
+        <div class="text-5xl sm:text-6xl mb-4">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+            stroke="currentColor" class="size-6">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+          </svg>
+        </div>
         <p class="text-xl sm:text-2xl text-red-600">Kon wedstrijden niet laden</p>
         <p class="text-gray-500 mt-2 text-base sm:text-lg">Probeer de pagina te vernieuwen</p>
       </div>

@@ -26,6 +26,7 @@ export function usePinokeMatches() {
     function filterActiveMatches(matchList) {
         // const now = new Date("2025-10-04T10:30:00Z"); // Fixed time for testing
         const now = new Date();
+
         return matchList.filter(match => {
             if (!match.utcDate) return false;
             const matchDateTime = new Date(match.utcDate);
@@ -54,8 +55,7 @@ export function usePinokeMatches() {
      */
     function updateMatches() {
         if (isToday.value) {
-            const activeMatches = filterActiveMatches(matches.value);
-            matches.value = activeMatches;
+            matches.value = filterActiveMatches(matches.value);
         }
         lastUpdate.value = new Date().toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
     }
@@ -106,13 +106,16 @@ export function usePinokeMatches() {
                 throw new Error(data.message || 'Server error');
             }
 
-            matches.value = data.matches || [];
-            isToday.value = data.isToday || false;
+            let filteredMatches = data.matches || [];
+            let today = data.isToday || false;
 
             // Filter out past matches if showing today's matches
-            if (isToday.value && matches.value.length > 0) {
-                matches.value = filterActiveMatches(matches.value);
+            if (today && filteredMatches.length > 0) {
+                filteredMatches = filterActiveMatches(filteredMatches);
             }
+
+            matches.value = filteredMatches;
+            isToday.value = today;
 
             // If showing today's matches, start live updates
             if (isToday.value) {

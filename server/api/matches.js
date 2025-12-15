@@ -17,7 +17,13 @@ const USE_VIAPLAY = false; // Set to false to disable Viaplay integration
  *   }
  */
 
+
 import { DateTime } from 'luxon';
+
+// In-memory cache for matches endpoint
+let matchesCache = null;
+let matchesCacheTime = 0;
+const CACHE_DURATION_MS = 30 * 60 * 1000; // 30 minutes
 
 /**
  * Parses a date and time string from Amsterdam timezone to UTC
@@ -42,7 +48,20 @@ function parseAmsterdamDate(dateStr, timeStr) {
 async function fetchCollections() {
   const response = await fetch('https://www.pinoke.nl/_dm/s/rt/actions/sites/c07b0251/collections/Toekomstige_wedstrijden/', {
     headers: {
-      'User-Agent': 'Mozilla/5.0 (compatible; PinokeBot/1.0)',
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:146.0) Gecko/20100101 Firefox/146.0',
+      'Accept': '*/*',
+      'Accept-Language': 'nl,en-US;q=0.7,en;q=0.3',
+      'Accept-Encoding': 'gzip, deflate, br, zstd',
+      'Referer': 'https://www.pinoke.nl/wedstrijdschema',
+      'Content-Type': 'application/json',
+      'Sec-Fetch-Dest': 'empty',
+      'Sec-Fetch-Mode': 'cors',
+      'Sec-Fetch-Site': 'same-origin',
+      'Connection': 'keep-alive',
+      'Sec-GPC': '1',
+      'Pragma': 'no-cache',
+      'Cache-Control': 'no-cache',
+      'TE': 'trailers',
     }
   });
 
@@ -75,7 +94,21 @@ async function fetchMatchesFromCollection(collectionName) {
 
   const response = await fetch(`https://www.pinoke.nl/_dm/s/rt/actions/sites/c07b0251/collections/${collectionName}/`, {
     headers: {
-      'User-Agent': 'Mozilla/5.0 (compatible; PinokeBot/1.0)',
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:146.0) Gecko/20100101 Firefox/146.0',
+      'Accept': '*/*',
+      'Accept-Language': 'nl,en-US;q=0.7,en;q=0.3',
+      'Accept-Encoding': 'gzip, deflate, br, zstd',
+      'Referer': 'https://www.pinoke.nl/wedstrijdschema',
+      'Content-Type': 'application/json',
+      'Sec-Fetch-Dest': 'empty',
+      'Sec-Fetch-Mode': 'cors',
+      'Sec-Fetch-Site': 'same-origin',
+      'Connection': 'keep-alive',
+      'Sec-GPC': '1',
+      'Pragma': 'no-cache',
+      'Cache-Control': 'no-cache',
+      'TE': 'trailers',
+      // 'Cookie': '', // Add cookies here if needed
     }
   });
 
@@ -152,11 +185,15 @@ function isMatchOnViaplay(viaplayProducts, match) {
  *   message: "Failed to fetch collections"
  * }
  */
-export default defineEventHandler(async (event) => {
-  try {
-    const now = DateTime.utc();
-    // const now = DateTime.fromISO("2025-12-06T16:00:00Z"); // Fixed time for testing
 
+export default defineEventHandler(async (event) => {
+  const now = DateTime.utc();
+  // Serve from cache if fresh
+  if (matchesCache && (Date.now() - matchesCacheTime < CACHE_DURATION_MS)) {
+    return { ...matchesCache, serverTime: now.toISO() };
+  }
+  try {
+    // ...existing code for fetching and processing matches...
     // First fetch the list of collections
     const collectionNames = await fetchCollections();
 
@@ -182,7 +219,6 @@ export default defineEventHandler(async (event) => {
         allCollectionMatches.push([]);
       }
     }
-
 
     // Flatten all matches into one array and deduplicate by unique key
     let allMatches = allCollectionMatches.flat();
@@ -269,11 +305,14 @@ export default defineEventHandler(async (event) => {
       matchesToReturn = allMatches.filter(match => match.utcDate.toISO().split('T')[0] === nextDate).slice(0, 4);
     }
 
-    return {
+    // Store in cache
+    matchesCache = {
       matches: matchesToReturn,
       isToday: matchesToReturn.some(match => match.utcDate.toISO().split('T')[0] === todayISO),
-      serverTime: now.toISO()
     };
+    matchesCacheTime = Date.now();
+
+    return { ...matchesCache, serverTime: now.toISO() };
   } catch (err) {
     console.error('Matches API error:', err);
     return {

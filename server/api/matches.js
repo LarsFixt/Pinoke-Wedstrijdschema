@@ -183,8 +183,18 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    // Flatten all matches into one array
+
+    // Flatten all matches into one array and deduplicate by unique key
     let allMatches = allCollectionMatches.flat();
+    // Deduplicate matches by a composite key (date, time, home, away, location, field)
+    const seen = new Set();
+    allMatches = allMatches.filter(m => {
+      const d = m.data;
+      const key = [d.date, d.time, d.home_team_name, d.away_team_name, d.location?.name, d.field].join('|');
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
 
     // Fetch Viaplay API for the current date if enabled
     let viaplayProducts = [];

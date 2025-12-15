@@ -1,3 +1,5 @@
+// Feature flag to enable/disable Viaplay integration
+const USE_VIAPLAY = false; // Set to false to disable Viaplay integration
 /**
  * API endpoint to fetch and return upcoming home matches for Pinoké.
  *
@@ -184,19 +186,21 @@ export default defineEventHandler(async (event) => {
     // Flatten all matches into one array
     let allMatches = allCollectionMatches.flat();
 
-    // Fetch Viaplay API for the current date
+    // Fetch Viaplay API for the current date if enabled
     let viaplayProducts = [];
-    try {
-      const viaplayRes = await fetch('https://content.viaplay.com/pcdash-nl/sport/hockey/tulp-hoofdklasse-hockey?date=' + now.toFormat('yyyy-MM-dd'));
-      if (viaplayRes.ok) {
-        const viaplayJson = await viaplayRes.json();
-        // Find the block with type 'list' and title 'Huidige uitzendingen'
-        const blocks = viaplayJson?._embedded?.['viaplay:blocks'] || [];
-        const listBlock = blocks.find(b => b.type === 'list' && b.title === 'Huidige uitzendingen');
-        viaplayProducts = listBlock?._embedded?.['viaplay:products'] || [];
+    if (USE_VIAPLAY) {
+      try {
+        const viaplayRes = await fetch('https://content.viaplay.com/pcdash-nl/sport/hockey/tulp-hoofdklasse-hockey?date=' + now.toFormat('yyyy-MM-dd'));
+        if (viaplayRes.ok) {
+          const viaplayJson = await viaplayRes.json();
+          // Find the block with type 'list' and title 'Huidige uitzendingen'
+          const blocks = viaplayJson?._embedded?.['viaplay:blocks'] || [];
+          const listBlock = blocks.find(b => b.type === 'list' && b.title === 'Huidige uitzendingen');
+          viaplayProducts = listBlock?._embedded?.['viaplay:products'] || [];
+        }
+      } catch (err) {
+        console.warn('Failed to fetch Viaplay schedule:', err.message);
       }
-    } catch (err) {
-      console.warn('Failed to fetch Viaplay schedule:', err.message);
     }
 
     // Main filter: all home matches, plus away matches for Heren 01/Dames 01 if on Viaplay
@@ -214,8 +218,9 @@ export default defineEventHandler(async (event) => {
           field = `Blaashal ${field}`;
         }
         if (
-          (match.home_team_name?.includes('Heren 01') || match.away_team_name?.includes('Heren 01')) ||
-          (match.home_team_name?.includes('Dames 01') || match.away_team_name?.includes('Dames 01'))
+          USE_VIAPLAY && (
+            (match.home_team_name?.includes('Heren 01') || match.away_team_name?.includes('Heren 01')) ||
+            (match.home_team_name?.includes('Dames 01') || match.away_team_name?.includes('Dames 01')))
         ) {
           isOnViaplay = isMatchOnViaplay(viaplayProducts, match);
         }
